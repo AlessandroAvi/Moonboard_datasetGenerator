@@ -68,13 +68,12 @@ def closest_hold(y,x,holds_pos):
 
 
 
-def nextProblem():
+def nextProblem(tl_x, tl_y, br_x, r_y, SCREEN_WIDTH, SCREEN_HEIGHT):
 
-	x = 1850
-	y = 600
+	x = tl_x + (br_x-tl_x) * 0.88
+	y = (tl_y+tl_y)/2
 
-	SCREEN_WIDTH = 1920
-	SCREEN_HEIGHT = 1080
+
 
 	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int(x/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0))    
 	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
@@ -159,35 +158,63 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 #   |_|  |_/_/   \_\___|_| \_|
 #
 # --------------------------------
-                           
+
+
+
+
+# THINGS TO MODIFY FOR MAKING IT WORK ON ANY COMPUTER
+# ****************************************************************************************************
+
 
 # Open JSON file
-json_path = r"C:/Users/massi/OneDrive/Documenti/Python/MoonBoard_CreateDataset/sample.json"
+json_path = r"YOUR_PATH_TO_THIS_REPO/sample.json"
+
+
+# These values define the pixel region where the code will take a screenshot. Inside this area should
+# be contained the emulator screen with the moonboard app opened on the first problem
+ss_region_tl_x = 1316		# screen shot region, top left, x coord
+ss_region_tl_y = 41 		# screen shot region, top left, y coord
+ss_region_br_x = 1879		# screen shot region, bottom right, x coord
+ss_region_br_y = 1040		# screen shot region, bottom left, y coord
+
+
+tot_problems = 1236		# Number of problems that you want to write in the dataset
+
+
+# Height and width of your screen
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
+
+
+# These are the values that will define where are the real holds, need to fine tune this depending on your screen
+yoff = 165
+xoff = 84
+x_sep = 43
+y_sep = 43
+
+# ****************************************************************************************************
+
+
+
 
 with open(json_path) as json_file:
     json_decoded = json.load(json_file)
-
-
-tot_problems = 1236		# Number defined from the availabel problems on the app
 
 
 # Cycle over all the problems available in the app
 for n in range(0, 1):
 
 	# Capture and save screen image 
-	ss_region = (1316,41, 1879, 1040)
+	ss_region = (ss_region_tl_x,ss_region_tl_y, ss_region_br_x, ss_region_br_y)
 	ss_img = ImageGrab.grab(ss_region)
-	#ss_img.save("SS3.jpg")
-	#img_path = r"C:/Users/massi/OneDrive/Documenti/Python/MoonBoard_CreateDataset/SS3.jpg"
-	#img = cv2.imread(img_path) 
 
 	image = np.array(ss_img)
 	img = image[:, :, ::-1]
 
 
 	# Exctract the circles (G,R,B)
-	low_r  = np.array([0, 0, 210])
-	high_r = np.array([30, 30, 255])
+	low_r  = np.array([0, 0, 210])				# minimum color red accepted in the mask
+	high_r = np.array([30, 30, 255])			# maximum color red accepted in the mask
 	maskR  = cv2.inRange(img, low_r, high_r)
 
 	low_b  = np.array([210, 0, 0])
@@ -205,21 +232,19 @@ for n in range(0, 1):
 	green_circles = detect_circle(maskG, "green detection",1)
 
 
-	# constants depending on the screen
-	yoff = 165
-	xoff = 84
-	x_sep = 43
-	y_sep = 43
-
-
-	# Create matrix that contains the real holds positions
+	# Create matrix that contains the real holds positions, need to fine tune parameter depending on the screen
 	holds_pos = np.zeros((18,11,2))
 	for j in range(0,18):
 		for i in range(0,11):
-			holds_pos[j,i,0] = yoff+y_sep*j
 			holds_pos[j,i,1] = xoff+x_sep*i
+			holds_pos[j,i,0] = yoff+y_sep*j
 
-	cv2.imshow('moon', img)
+			# ******** Uncomment the line below to debug and fine tune the parameters ********
+			#cv2.circle(img, (xoff+x_sep*i,yoff+y_sep*j),2,(255,0,0),3)
+
+	# ******** Uncomment the line below to debug and fine tune the parameters ********
+	#cv2.imshow('moon', img)
+
 
 	# Assign to each fiund circle the closes real hold
 	r_hold = []
@@ -246,14 +271,12 @@ for n in range(0, 1):
 	writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded)
 
 
-	# Use the mouse to skip to nex problem
-	nextProblem()
+	nextProblem(ss_region_tl_x, ss_region_tl_y, ss_region_br_x, ss_region_br_y, SCREEN_WIDTH, SCREEN_HEIGHT)
 	print(n)
 
 	cv2.waitKey(0)
 
 
-
-# Write everythiong in one json file
+# Write everything in one json file
 with open(json_path, 'w') as json_file:
     json.dump(json_decoded, json_file, sort_keys=True, indent=4, separators=(',', ': '))
