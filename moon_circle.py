@@ -68,12 +68,10 @@ def closest_hold(y,x,holds_pos):
 
 
 
-def nextProblem(tl_x, tl_y, br_x, r_y, SCREEN_WIDTH, SCREEN_HEIGHT):
+def nextProblem(tl_x, tl_y, br_x, br_y, SCREEN_WIDTH, SCREEN_HEIGHT):
 
-	x = tl_x + (br_x-tl_x) * 0.88
-	y = (tl_y+tl_y)/2
-
-
+	x = int(tl_x + (br_x-tl_x) * 0.88)
+	y = int((tl_y+br_y)/2)
 
 	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int(x/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0))    
 	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
@@ -84,7 +82,7 @@ def nextProblem(tl_x, tl_y, br_x, r_y, SCREEN_WIDTH, SCREEN_HEIGHT):
 
 
 
-def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
+def writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, json_decoded):
 
 
 	# Write the json informations
@@ -93,16 +91,17 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 	problem_dict = {
         "Name" : "to_be_done",
         "Grade" : "to_be_done",
+		"IsBenchmark": bench_check,
         "Moves" : [],
-    	"Sended":"false"
+    	"Sended": False
     }
 
 	# Cycle over red holds - TOP
 	for k in range(0, len(r_hold)):
 
 		hold_name = str(r_hold[k][0])+str(r_hold[k][1])
-		hold_start = "false"
-		hold_top = "true"
+		hold_start = False
+		hold_top = True
 
 		move_dict = {
 					"Description": hold_name,
@@ -116,8 +115,8 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 	for k in range(0, len(b_hold)):
 
 		hold_name = str(b_hold[k][0])+str(b_hold[k][1])
-		hold_start = "false"
-		hold_top = "false"
+		hold_start = False
+		hold_top = False
 
 		move_dict = {
 					"Description": hold_name,
@@ -131,8 +130,8 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 	for k in range(0, len(g_hold)):
 
 		hold_name = str(g_hold[k][0])+str(g_hold[k][1])
-		hold_start = "true"
-		hold_top = "false"
+		hold_start = True
+		hold_top = False
 
 		move_dict = {
 					"Description": hold_name,
@@ -146,6 +145,22 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 
 	json_decoded[str(n)] = problem_dict
 
+
+
+def checkBenchmark(in_image, rx, lx):
+
+	image = cv2.cvtColor(in_image, cv2.COLOR_BGR2GRAY)
+	all_circs = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, 0.5, 50, param1=10, param2=18, minRadius=0, maxRadius=1000)
+	all_circs_rounded = np.uint16(np.around(all_circs))
+
+	# Compute distance between 2 circles, and decide if it's benchmark or not
+	distance = all_circs_rounded[0,0][0] - all_circs_rounded[0,1][0]
+	if(distance/(rx-lx) > 0.5):
+		bench_state = False
+	else:
+		bench_state = True
+
+	return bench_state
 
 
 
@@ -167,7 +182,7 @@ def writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded):
 
 
 # Open JSON file
-json_path = r"YOUR_PATH_TO_THIS_REPO/sample.json"
+json_path = r"C:/Users/massi/OneDrive/Documenti/Python/MoonBoard_CreateDataset/sample.json"
 
 
 # These values define the pixel region where the code will take a screenshot. Inside this area should
@@ -202,7 +217,7 @@ with open(json_path) as json_file:
 
 
 # Cycle over all the problems available in the app
-for n in range(0, 1):
+for n in range(0, 10):
 
 	# Capture and save screen image 
 	ss_region = (ss_region_tl_x,ss_region_tl_y, ss_region_br_x, ss_region_br_y)
@@ -211,6 +226,10 @@ for n in range(0, 1):
 	image = np.array(ss_img)
 	img = image[:, :, ::-1]
 
+	# Benchmark check
+	bench_check_img = np.copy(img[955:, :])
+	bench_check = checkBenchmark(bench_check_img, ss_region_br_x, ss_region_tl_x)
+	
 
 	# Exctract the circles (G,R,B)
 	low_r  = np.array([0, 0, 210])				# minimum color red accepted in the mask
@@ -227,9 +246,9 @@ for n in range(0, 1):
 	
 
 	# Detect the centers and radiuses of circles
-	red_circles   = detect_circle(maskR, "red detection",1)
-	blue_circles  = detect_circle(maskB, "blue detection",1)
-	green_circles = detect_circle(maskG, "green detection",1)
+	red_circles   = detect_circle(maskR, "red detection",0)
+	blue_circles  = detect_circle(maskB, "blue detection",0)
+	green_circles = detect_circle(maskG, "green detection",0)
 
 
 	# Create matrix that contains the real holds positions, need to fine tune parameter depending on the screen
@@ -268,7 +287,7 @@ for n in range(0, 1):
 
 
 	# Write the results in a JSON file
-	writeJSONfile(n, r_hold, g_hold, b_hold, json_decoded)
+	writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, json_decoded)
 
 
 	nextProblem(ss_region_tl_x, ss_region_tl_y, ss_region_br_x, ss_region_br_y, SCREEN_WIDTH, SCREEN_HEIGHT)
