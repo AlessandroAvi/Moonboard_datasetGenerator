@@ -5,6 +5,7 @@ from PIL import ImageGrab
 import time
 import win32api, win32con
 import json
+import pytesseract
 
 
 
@@ -21,7 +22,7 @@ import json
 
 
 
-def detect_circle(image, name, verbose):
+def detectCircle(image, name, verbose):
 
 	all_circs = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, 1.2, 30, param1=60, param2=40, minRadius=0, maxRadius=1000)
 	if(all_circs is None):
@@ -44,7 +45,7 @@ def detect_circle(image, name, verbose):
 
 
 
-def closest_hold(y,x,holds_pos):
+def closestHold(y,x,holds_pos):
 	lett_str = ["A","B","C","D","E","F","G","H","I","J","K"]
 	num_str = ["18","17","16","15","14","13","12","11","10","9","8","7","6","5","4","3","2","1"]
 
@@ -67,30 +68,34 @@ def closest_hold(y,x,holds_pos):
 
 
 
-
 def nextProblem(tl_x, tl_y, br_x, br_y, SCREEN_WIDTH, SCREEN_HEIGHT):
 
 	x = int(tl_x + (br_x-tl_x) * 0.88)
 	y = int((tl_y+br_y)/2)
 
-	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int(x/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0))    
+	# move to roght side of the app
+	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int(x/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0))  
+	# press the left button 
 	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
 
-	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int((x-50)/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0))      
+	# slightly drag the clicked mouse to the left
+	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE | win32con.MOUSEEVENTF_ABSOLUTE, int((x-50)/SCREEN_WIDTH*65535.0), int(y/SCREEN_HEIGHT*65535.0)) 
+	# let go the left button     
 	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x-50,y,0,0)
 
 
 
 
-def writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, json_decoded):
+def writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, text, json_decoded):
 
 
 	# Write the json informations
-	problem_name = str(n)
+	problem_name = text[0]
+	problem_grade = text[1]
 
 	problem_dict = {
-        "Name" : "to_be_done",
-        "Grade" : "to_be_done",
+        "Name" : problem_name,
+        "Grade" : problem_grade,
 		"IsBenchmark": bench_check,
         "Moves" : [],
     	"Sended": False
@@ -154,13 +159,39 @@ def checkBenchmark(in_image, rx, lx):
 	all_circs_rounded = np.uint16(np.around(all_circs))
 
 	# Compute distance between 2 circles, and decide if it's benchmark or not
-	distance = all_circs_rounded[0,0][0] - all_circs_rounded[0,1][0]
+	num1 = all_circs_rounded[0,0][0]
+	num2 = all_circs_rounded[0,1][0]
+	distance = np.abs(np.subtract(num1, num2))
 	if(distance/(rx-lx) > 0.5):
 		bench_state = False
 	else:
 		bench_state = True
 
 	return bench_state
+
+
+def detectText(image):
+
+	# cut out only the important part of the image
+	x_1 = int(0.17*(ss_region_br_x-ss_region_tl_x))
+	x_2 = int(0.88*(ss_region_br_x-ss_region_tl_x))
+	y_1 = int(0.058*(ss_region_br_y-ss_region_tl_y))
+	y_2 = int(0.080*(ss_region_br_y-ss_region_tl_y))
+
+	img = image[y_1:y_2, x_1:x_2]
+	invert = cv2.bitwise_not(img) 
+	text = pytesseract.image_to_string(invert)
+	line = text.split('\n')
+	content = line[0].split(',')
+	if(len(content) < 2):
+		content.append('NA')
+
+	#print(line)
+	#print(content)
+	#cv2.imshow('c', invert)
+	#cv2.waitKey(0)
+
+	return content
 
 
 
@@ -187,18 +218,18 @@ json_path = r"C:/Users/massi/OneDrive/Documenti/Python/MoonBoard_CreateDataset/s
 
 # These values define the pixel region where the code will take a screenshot. Inside this area should
 # be contained the emulator screen with the moonboard app opened on the first problem
-ss_region_tl_x = 1316		# screen shot region, top left, x coord
-ss_region_tl_y = 41 		# screen shot region, top left, y coord
-ss_region_br_x = 1879		# screen shot region, bottom right, x coord
-ss_region_br_y = 1040		# screen shot region, bottom left, y coord
+ss_region_tl_x = 1752		# screen shot region, top left, x coord
+ss_region_tl_y = 0 		    # screen shot region, top left, y coord
+ss_region_br_x = 2518		# screen shot region, bottom right, x coord
+ss_region_br_y = 1400		# screen shot region, bottom left, y coord
 
 
-tot_problems = 1236		# Number of problems that you want to write in the dataset
+tot_problems = 1248		# Number of problems that you want to write in the dataset
 
 
 # Height and width of your screen
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+SCREEN_WIDTH = 2560
+SCREEN_HEIGHT = 1440
 
 
 # These are the values that will define where are the real holds, need to fine tune this depending on your screen
@@ -217,7 +248,7 @@ with open(json_path) as json_file:
 
 
 # Cycle over all the problems available in the app
-for n in range(0, 10):
+for n in range(0, tot_problems):
 
 	# Capture and save screen image 
 	ss_region = (ss_region_tl_x,ss_region_tl_y, ss_region_br_x, ss_region_br_y)
@@ -225,6 +256,8 @@ for n in range(0, 10):
 
 	image = np.array(ss_img)
 	img = image[:, :, ::-1]
+
+	text = detectText(img)
 
 	# Benchmark check
 	bench_check_img = np.copy(img[955:, :])
@@ -246,9 +279,9 @@ for n in range(0, 10):
 	
 
 	# Detect the centers and radiuses of circles
-	red_circles   = detect_circle(maskR, "red detection",0)
-	blue_circles  = detect_circle(maskB, "blue detection",0)
-	green_circles = detect_circle(maskG, "green detection",0)
+	red_circles   = detectCircle(maskR, "red detection",0)
+	blue_circles  = detectCircle(maskB, "blue detection",0)
+	green_circles = detectCircle(maskG, "green detection",0)
 
 
 	# Create matrix that contains the real holds positions, need to fine tune parameter depending on the screen
@@ -272,28 +305,28 @@ for n in range(0, 10):
 
 	if type(red_circles) is not list:
 		for i in range(0,red_circles.shape[1]):
-			hold = closest_hold(red_circles[0,i,1],red_circles[0,i,0], holds_pos)
+			hold = closestHold(red_circles[0,i,1],red_circles[0,i,0], holds_pos)
 			r_hold.append(hold)
 
 	if type(blue_circles) is not list:
 		for i in range(0,blue_circles.shape[1]):
-			hold = closest_hold(blue_circles[0,i,1],blue_circles[0,i,0], holds_pos)
+			hold = closestHold(blue_circles[0,i,1],blue_circles[0,i,0], holds_pos)
 			b_hold.append(hold)
 
 	if type(green_circles) is not list:
 		for i in range(0,green_circles.shape[1]):
-			hold = closest_hold(green_circles[0,i,1],green_circles[0,i,0], holds_pos)
+			hold = closestHold(green_circles[0,i,1],green_circles[0,i,0], holds_pos)
 			g_hold.append(hold)
 
 
 	# Write the results in a JSON file
-	writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, json_decoded)
+	writeJSONfile(n, r_hold, g_hold, b_hold, bench_check, text, json_decoded)
 
 
 	nextProblem(ss_region_tl_x, ss_region_tl_y, ss_region_br_x, ss_region_br_y, SCREEN_WIDTH, SCREEN_HEIGHT)
 	print(n)
 
-	cv2.waitKey(0)
+	#cv2.waitKey(0)
 
 
 # Write everything in one json file
