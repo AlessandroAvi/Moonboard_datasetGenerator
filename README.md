@@ -18,7 +18,7 @@ The procedure has to be performed on a computer, where an Android simulator with
 
 Currently the JSON file on thsi repo only contains the problemswith black holds (because my moonboard panel only has those holds).
 
- ![name-of-you-image](https://github.com/AlessandroAvi/Moonboard_Dataset/blob/main/Img/material.png) 
+ ![name-of-you-image](https://github.com/AlessandroAvi/Moonboard_Dataset/blob/main/How_to.jpg) 
 
 
 
