@@ -213,7 +213,7 @@ def detectText(image):
 
 
 # Open JSON file
-json_path = r"C:/Users/massi/OneDrive/Documenti/Python/MoonBoard_CreateDataset/sample.json"
+json_path = r"YOUR PATH/MoonBoard_Dataset/sample.json"
 
 
 # These values define the pixel region where the code will take a screenshot. Inside this area should

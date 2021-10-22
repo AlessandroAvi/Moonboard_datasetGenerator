@@ -1,4 +1,4 @@
-# Moonboard_Dataset
+# MOONBOARD DATASET
 
 This repo contains the code that I developed for creating a dataset that contains all the problems from the moonobard app.
 
@@ -6,19 +6,35 @@ I developed this code because the original dataset is private and I couldn't use
 
 ## IDEA 
 
-using an Android emulator on the computer and using openCV I make a screenshot of the app. Then I mask out all the circles (red, green and blue) and perform a circle detection on these maks. By doing this I am able to find the center of the circles that reppresent the positions of the holds. I then associate to each single circle the closest real hold. All the important informations (hold name, identification start/top/middle hold, problem ID) are then stored inside a JSON file. This procedure is done automatically on all the available problems (by exploiting win32api for moving automatically the mouse and select new problems) on the app that I filtered at the time of running the code. Additionally each problem is assigned with a unique ID, this is used for switching on the correct LEDs on the moonboard panel.
+The code is based on application of basic computer vision concept on screenshots of the moonboard app. The idea is to take a screenshot for every single moonboard problem and then use OpenCV for the extraction of the main informations of the problem. 
 
+In order to detect the holds used from the boulder three masks are created, where each mask is just the original image but where only the red/green/blue pixels are maintained (red=top hold, blue=middle hold, green=start hold). This creates three black and white images where the circles are well distincted from the background. Once these image are obtained is immediate to apply a circle detector which is able to find the x,y coordinates of the centers of the circle. These coordinates are then associated to the closest real hold.
 
+After that also some text recognition is applied in order to store also the name and grade of the boulder problem.
 
-## TO DO
+Everything is then stored in a JSON file (holds used, type of hold, problem name, problem grade, benckmark, problem ID->just a number reppresenting the n-th boulder).
 
-- refine the JSON file that gets created
-- add the recognition of name and grade (text recognition with openCV)
-- make available all datasets (2016 - 2018 -2019)
+The procedure has to be performed on a computer, where an Android simulator with the monnboard app is visible on the screen. The script will catch a portion of the screen (to be defined manually), take a screenshot, detect the holds, detect name and grade, store the informations inside the JSON, automatically move the mouse to move to the next problem.
+
+Currently the JSON file on thsi repo only contains the problemswith black holds (because my moonboard panel only has those holds).
+
+ ![name-of-you-image](https://github.com/AlessandroAvi/Moonboard_Dataset/blob/main/Img/material.png) 
 
 
 
 ## HOW  TO USE
+
+- download an andoid simualtor (I used bluestack)
+- open the moonboard app in the simulator and move the window as big as possible in a visible part of the screen
+- change the parameters inside the script (screen size, total number of holds to be detected, JSON file path, coordinates of the capture region -> for this I suggest to take a screenshot of the entire screen and then use paint to see where exactly the cature region in the script should be)
+- run the script
+
+## TO DO
+
+- refine the JSON file that gets created
+- make available all datasets (2016 - 2018 -2019)
+
+
 
 
 
