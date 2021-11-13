@@ -2,7 +2,10 @@
 
 This repo contains the code that I developed for creating a dataset that contains all the problems from the moonobard app.
 
-I developed this code because the original dataset is private and I couldn't use properly my moonboard led kit that I developed in [this](https://github.com/AlessandroAvi/Moonboard_LED_DIY) project. 
+I developed this code because the original dataset is private and I couldn't use properly my moonboard LED controller that I developed withan STM32. Other related project to this are:
+
+- [STM32 project](https://github.com/AlessandroAvi/Moonboard_LED_DIY) for controlling LED lights through manual keypad or bluetooth connection to the FishBoard app
+- [Android app](https://github.com/AlessandroAvi/FishBoard-app) that can be used to filter the moonboard problems (dataset created from this repo), visualize them on the screen and later send the most relevant information via bluetooth to the STM32 microcontroller
 
 ## IDEA 
 
